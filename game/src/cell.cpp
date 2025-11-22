@@ -104,7 +104,7 @@ void cellDomain::cellUpdate(std::size_t x, std::size_t y){
     std::size_t cell = this->readIndex(x,y);
     behaviorComp& bComp = this->behaviorCompCells[cell];
 
-    if (!bComp.active || bComp.type == NONE) return;            // if inactive or empty (NONE) cell
+    if (bComp.type == NONE) return;            // if inactive or empty (NONE) cell
 
     const elementRecipe& recipe = updateManager[bComp.type];
     if (recipe.count == 0) return;
@@ -115,10 +115,14 @@ void cellDomain::cellUpdate(std::size_t x, std::size_t y){
 
         std::size_t tcell = nowlogic(cell, this);
 
-        if (cell == tcell) break;
+        if (bComp.active && cell == tcell){
+            this->behaviorCompCells[tcell].active = false;
+            break;
+        };
 
-        this->cellSwap  (cell,tcell);
         this->behaviorCompCells[tcell].active = true;
+        this->cellSwap  (cell,tcell);
+        
 
         cell = tcell;
 
