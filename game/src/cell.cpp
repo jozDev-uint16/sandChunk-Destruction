@@ -8,6 +8,8 @@
 
 #include "cell.hpp"
 
+elementRecipe updateManager[MAX_TYPES];
+
 behaviorComp updateList[MAX_TYPES]  = {};     // INITIALIZE MEMORY -> also makes them null!
 renderComp renderList[MAX_TYPES]    = {};
 
@@ -102,14 +104,26 @@ void cellDomain::cellUpdate(std::size_t x, std::size_t y){
     std::size_t cell = this->readIndex(x,y);
     behaviorComp& bComp = this->behaviorCompCells[cell];
 
-    if (bComp.behaviors == nullptr) return;
+    if (!bComp.active || bComp.type == NONE) return;            // if inactive or empty (NONE) cell
 
-    std::size_t tcell = bComp.behaviors(cell,this);      //  the target cell to swap into (validated by behaviorLogic method)
+    const elementRecipe& recipe = updateManager[bComp.type];
+    if (recipe.count == 0) return;
 
-    this->cellSwap(cell,tcell);                     //  swap happens automatically
-    this->behaviorCompCells[tcell].active = true;
-    
-}
+    for (uint8_t k = 0; k < recipe.count; k++)    {
+        /* code */
+        behaviorLogic nowlogic = recipe.bSteps[k];
+
+        std::size_t tcell = nowlogic(cell, this);
+
+        if (cell == tcell) break;
+
+        this->cellSwap  (cell,tcell);
+        this->behaviorCompCells[tcell].active = true;
+
+        cell = tcell;
+
+    };
+};
 //  just extracted logic
 
 void cellDomain::domainUpdate   (int frameCount){
@@ -205,9 +219,6 @@ std::size_t basicStatic(std::size_t cell, cellDomain* domain){
     return cell;
 };
 
-
-
-
 Color grainyShading(std::size_t cell, cellDomain* domain){
 
     //  x is hue,   y is sat,   z is value
@@ -247,26 +258,6 @@ Color grainyShading(std::size_t cell, cellDomain* domain){
 /*  Below are added uniques (ie components for a unique cell)   */
 //
 
-
-void initCellPalette(){
-
-    updateList[NONE] =     behaviorComp();
-    renderList[NONE] =     renderComp();
-
-/*  Contingent list of particle behavior comps (use cName as index!)*/
-    updateList[SAND] =     behaviorComp(SAND, (1<<0) | (1<<1) | (1<<2), basicPowder);
-    renderList[SAND] =       renderComp(SANDCOL,((Vector3){0.0f,0.2f,0.0f}), grainyShading);
-
-    updateList[GRAVEL] =   behaviorComp(GRAVEL, (1<<0) | (1<<1) | (1<<2), basicPowder);
-    renderList[GRAVEL] =     renderComp(GRAVELCOL,((Vector3){0.0f,0.2f,0.1f}), grainyShading);
-
-    updateList[WOOD] =   behaviorComp(WOOD, (0x00000000), basicStatic);
-    renderList[WOOD] =     renderComp(WOODCOL,((Vector3){0.0f,0.2f,0.3f}), grainyShading);
-    // add here
-    //  updateList[ ]
-    //  renderList[ ]
-};
-
 void initElementRecipe(){
     for (uint16_t i = 0; i < MAX_ELEM_STEPS; i++)   updateManager[i].count = 0;
 
@@ -281,6 +272,26 @@ void initElementRecipe(){
     };
 
 };
+void initCellPalette(){
+
+    updateList[NONE] =     behaviorComp();
+    renderList[NONE] =     renderComp();
+
+/*  Contingent list of particle behavior comps (use cName as index!)*/
+    updateList[SAND] =     behaviorComp(SAND, (1<<0) | (1<<1) | (1<<2));
+    renderList[SAND] =       renderComp(SANDCOL,((Vector3){0.0f,0.2f,0.0f}), grainyShading);
+
+    updateList[GRAVEL] =   behaviorComp(GRAVEL, (1<<0) | (1<<1) | (1<<2));
+    renderList[GRAVEL] =     renderComp(GRAVELCOL,((Vector3){0.0f,0.2f,0.1f}), grainyShading);
+
+    updateList[WOOD] =   behaviorComp(WOOD, (0x00000000));
+    renderList[WOOD] =     renderComp(WOODCOL,((Vector3){0.0f,0.2f,0.3f}), grainyShading);
+    // add here
+    //  updateList[ ]
+    //  renderList[ ]
+};
+
+
 
 /*      TODO:   behaviorComp param will have source from another list! the updateManager*/
 

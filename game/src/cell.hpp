@@ -79,11 +79,11 @@ struct behaviorComp{
 
     behaviorComp(): active(false), type(NONE), collideMask(0b00000000), density(0.0f) {};
 
-    behaviorComp(cName t, uint8_t mask, behaviorLogic logics): 
+    behaviorComp(cName t, uint8_t mask): 
         active(true),          // ⬅️ Initialized (e.g., set to true for a new particle)
         type(t),               
         collideMask(mask),     
-        density(1.0f),         // ⬅️ Initialized (e.g., use a default value, or take as argument)   
+        density(1.0f)         // ⬅️ Initialized (e.g., use a default value, or take as argument)   
     {};
 };
 
@@ -126,7 +126,7 @@ struct cellDomain{
 
     void cellSwap   (std::size_t cellA, std::size_t cellB);
     void cellAdd    (std::size_t cx, std::size_t cy, cName id);
-    void cellUpdate (int x, int y);
+    void cellUpdate (std::size_t x, std::size_t y);
 
     void domainUpdate (int frameCount);
     void domainRender ();
@@ -136,13 +136,14 @@ struct cellDomain{
 
 //  INITIALIZE NEW PARTICLES HERE
 
-extern elementRecipe updateManager[MAX_ELEM_STEPS];
+extern elementRecipe updateManager[MAX_TYPES];
 
 extern behaviorComp updateList[MAX_TYPES];
 extern renderComp renderList[MAX_TYPES];
 
-void initCellPalette();
 void initElementRecipe();
+void initCellPalette();
+
 /*  This basically makes the order of all added things indexed by the enum + 1*/
 
 //  INITIALIZE THE CHUNK HERE TOO:

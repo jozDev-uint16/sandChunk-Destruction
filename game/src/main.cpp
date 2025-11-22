@@ -53,6 +53,7 @@ void GameInit()
     // load resources (DO NOT SET)
 
     
+    initElementRecipe();
     initCellPalette();      // just added this here so that it auto-works without doing it globally
 }
 
