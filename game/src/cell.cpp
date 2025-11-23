@@ -9,6 +9,7 @@
 #include "cell.hpp"
 
 elementRecipe updateManager[MAX_TYPES];
+Color elementPalette[MAX_TYPES]     = {};
 
 behaviorComp updateList[MAX_TYPES]  = {};     // INITIALIZE MEMORY -> also makes them null!
 renderComp renderList[MAX_TYPES]    = {};
@@ -277,22 +278,30 @@ void initElementRecipe(){
 
 };
 void initCellPalette(){
+/*  List of Colors for each element (may be phased out) */
+    elementPalette[SAND] = (Color){237, 211, 157, 255};
+    elementPalette[GRAVEL] = (Color){95, 94, 93, 255};
+    elementPalette[WOOD] = (Color){95, 62, 42, 255};
 
+
+/*  Contingent list of particle behavior comps (use cName as index!)*/
     updateList[NONE] =     behaviorComp();
     renderList[NONE] =     renderComp();
 
-/*  Contingent list of particle behavior comps (use cName as index!)*/
+
     updateList[SAND] =     behaviorComp(SAND, (1<<0) | (1<<1) | (1<<2));
-    renderList[SAND] =       renderComp(SANDCOL,((Vector3){0.0f,0.2f,0.0f}), grainyShading);
+    renderList[SAND] =       renderComp(elementPalette[SAND],((Vector3){0.0f,0.2f,0.0f}), grainyShading);
 
     updateList[GRAVEL] =   behaviorComp(GRAVEL, (1<<0) | (1<<1) | (1<<2));
-    renderList[GRAVEL] =     renderComp(GRAVELCOL,((Vector3){0.0f,0.2f,0.1f}), grainyShading);
+    renderList[GRAVEL] =     renderComp(elementPalette[GRAVEL],((Vector3){0.0f,0.2f,0.1f}), grainyShading);
 
     updateList[WOOD] =   behaviorComp(WOOD, (0x00000000));
-    renderList[WOOD] =     renderComp(WOODCOL,((Vector3){0.0f,0.2f,0.3f}), grainyShading);
+    renderList[WOOD] =     renderComp(elementPalette[WOOD],((Vector3){0.0f,0.2f,0.3f}), grainyShading);
     // add here
     //  updateList[ ]
     //  renderList[ ]
+
+
 };
 
 

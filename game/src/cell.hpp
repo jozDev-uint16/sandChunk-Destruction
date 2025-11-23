@@ -21,9 +21,7 @@ enum cName : uint8_t{
     MAX_TYPES
 };
 
-#define SANDCOL     (Color){237, 211, 157, 255}
-#define GRAVELCOL   (Color){95, 94, 93, 255}
-#define WOODCOL     (Color){95, 62, 42, 255}
+
 
 struct cellOffset { int dx, dy; };
 
@@ -137,6 +135,7 @@ struct cellDomain{
 //  INITIALIZE NEW PARTICLES HERE
 
 extern elementRecipe updateManager[MAX_TYPES];
+extern Color elementPalette[MAX_TYPES];
 
 extern behaviorComp updateList[MAX_TYPES];
 extern renderComp renderList[MAX_TYPES];
