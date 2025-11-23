@@ -10,28 +10,32 @@
 
 void brush::updateBrush(MouseButton key){
     this->isDrawing = false;
-    this->pos = (Vector2){  GetMouseX(), GetMouseY()    };
+    this->pos = (Vector2){  (float)(GetMouseX()), (float)(GetMouseY()) };
 
     int cIndex = (int)(this->typeIndex);
     int delta = (int)(GetMouseWheelMove());
 
-     DrawCircleLines(pos.x,pos.y,
+    DrawCircle(pos.x,pos.y,
+        this->radius*this->chunk.cellSize,
+        (Color){100,100,100,25});
+
+    DrawCircleLines(pos.x,pos.y,
         this->radius*this->chunk.cellSize,
         elementPalette[typeCurrent]);
 
-    if (delta == 0) return;
+    if (delta != 0){
+        cIndex += delta;   
 
-    cIndex += delta;   
+        if (cIndex < 0) {
+            cIndex = MAX_TYPES - 1; // Wrap to end
+        } else if (cIndex >= MAX_TYPES) {
+            cIndex = 0;             // Wrap to start
+        };
 
-    if (cIndex < 0) {
-        cIndex = MAX_TYPES - 1; // Wrap to end
-    } else if (cIndex >= MAX_TYPES) {
-        cIndex = 0;             // Wrap to start
+        // 4. CRITICAL: Save the new index back to the CLASS MEMBER
+        this->typeIndex = (uint16_t)cIndex;
+        this->typeCurrent = (cName)cIndex;
     };
-
-    // 4. CRITICAL: Save the new index back to the CLASS MEMBER
-    this->typeIndex = (uint16_t)cIndex;
-    this->typeCurrent = (cName)cIndex;
 
     if(!IsMouseButtonDown(key)) return;
 

@@ -7,7 +7,6 @@
 
 #include "cell.hpp"
 #include "brush.hpp"
-#include "debug.hpp"
 
 #define TARGET_FPS  (double)(144)
 #define PHY_STEP    (double)(1/TARGET_FPS)
@@ -63,8 +62,7 @@ void GameDraw()
 {
     BeginDrawing();
     ClearBackground(BLACK);
-    
-    debug1();
+
     
     DrawRectangleLines(
         firstChunk.boxPos.x-1,
