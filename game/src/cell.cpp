@@ -209,7 +209,7 @@ std::size_t basicSolidPowder(std::size_t cell, cellDomain* domain){
 };
 
 std::size_t basicStatic(std::size_t cell, cellDomain* domain){
-    cName valids = NONE;
+    cName valids = (NONE);
     
     int cellx = NEIGHBORS[3].dx + 1;
     int celly = NEIGHBORS[3].dy;
@@ -221,6 +221,31 @@ std::size_t basicStatic(std::size_t cell, cellDomain* domain){
     if (domain->readBehavior((std::size_t)target).type == valids) return target;
     
     return cell;
+};
+
+std::size_t basicLiquid(std::size_t cell, cellDomain* domain){
+    uint8_t mask = ((1<<0) | (1<<1) | (1<<2) | (1<<3) | (1<<4));  //  collide mask will be unique to ALL behaviors
+    cName valids = NONE;                        //  Valids are cell names that are allowed to swap to (mainly NONE)
+
+    bool flip = (GetRandomValue(0, 1) == 1);
+    const uint8_t* checkOrder = flip ? ORDER_SWAPPED : ORDER_NORMAL;
+
+    for (uint8_t i = 0; i < 8; i++){
+        
+        uint8_t k = checkOrder[i];
+        
+        if (mask & (1 << k)) {
+            int dx = NEIGHBORS[k].dx;
+            int dy = NEIGHBORS[k].dy;
+
+            if ((int)(domain->getOffset(cell, dx, dy)) == -1) continue;
+
+            std::size_t target = domain->getOffset(cell, dx, dy);
+
+            if (domain->readBehavior((std::size_t)target).type == valids) return target;
+        };      
+    };
+    return cell;  
 };
 
 std::size_t kineticFall(std::size_t cell, cellDomain* domain){
@@ -308,6 +333,9 @@ void initElementRecipe(){
     updateManager[WOOD] = {1, 10,
         {   basicStatic, nullptr, nullptr, nullptr }
     };
+    updateManager[WATER] = {2, 10,
+        {   kineticFall, basicLiquid, nullptr, nullptr }
+    };
 
 };
 void initCellPalette(){
@@ -315,6 +343,7 @@ void initCellPalette(){
     elementPalette[SAND] = (Color){237, 211, 157, 255};
     elementPalette[GRAVEL] = (Color){95, 94, 93, 255};
     elementPalette[WOOD] = (Color){95, 62, 42, 255};
+    elementPalette[WATER] = (Color){33, 105, 173, 200};
 
 
 /*  Contingent list of particle behavior comps (use cName as index!)*/
@@ -329,6 +358,9 @@ void initCellPalette(){
 
     updateList[WOOD] =   behaviorComp(WOOD);
     renderList[WOOD] =     renderComp(elementPalette[WOOD],((Vector3){0.0f,0.2f,0.3f}), grainyShading);
+
+    updateList[WATER] =   behaviorComp(WATER);
+    renderList[WATER] =     renderComp(elementPalette[WATER],((Vector3){0.0f,0.0f,0.3f}), grainyShading);
     // add here
     //  updateList[ ]
     //  renderList[ ]

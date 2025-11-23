@@ -8,15 +8,18 @@
 #include "algorithm"
 
 
-#define CELL_SCALE 3
+#define CELL_SCALE 2
 #define MAX_ELEM_STEPS 4
 #define GRAVITY 0.2f
 
+/*  ADD NEW ELEMENTS HERE!  */
 enum cName : uint8_t{
     NONE = 0,
     SAND,
     GRAVEL,
     WOOD,
+    WATER,
+
     /*  NOTE: do not use the last enum as an actual particle    */
     MAX_TYPES
 };
@@ -41,7 +44,7 @@ static constexpr cellOffset NEIGHBORS[8] = {
     */
 };
 static const uint8_t ORDER_NORMAL[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-static const uint8_t ORDER_SWAPPED[8] = { 0, 2, 1, 3, 4, 5, 6, 7 };
+static const uint8_t ORDER_SWAPPED[8] = { 0, 2, 1, 4, 3, 5, 7, 6 };
 /*      */
 
 struct cellDomain;      // forward declared
@@ -73,7 +76,7 @@ struct behaviorComp{
     /*  Kinematic/Behavior vars */
 
     Vector2 cellV;          // mostly for acceleration, but very useful -> KCell (aka physics-affect sand)
-    float pEnergy;          // the equivalent of potential energy
+    float pEnergy;          // the equivalent of potential energy -> carries on to succeeding behaviors
               
     behaviorComp(): active(false), type(NONE), cellV({0,0}), pEnergy(0.0f) {};
 
