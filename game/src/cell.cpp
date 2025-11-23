@@ -183,7 +183,7 @@ void cellDomain::domainReset    (){
 /*  END OF CELLDOMAIN  */
 //
 
-std::size_t basicPowder(std::size_t cell, cellDomain* domain){
+std::size_t basicSolidPowder(std::size_t cell, cellDomain* domain){
     uint8_t mask = ((1<<0) | (1<<1) | (1<<2));  //  collide mask will be unique to ALL behaviors
     cName valids = NONE;                        //  Valids are cell names that are allowed to swap to (mainly NONE)
 
@@ -205,7 +205,7 @@ std::size_t basicPowder(std::size_t cell, cellDomain* domain){
             if (domain->readBehavior((std::size_t)target).type == valids) return target;
         };      
     };
-    return cell;    // if all else fails (would be factored out soon)
+    return cell;  
 };
 
 std::size_t basicStatic(std::size_t cell, cellDomain* domain){
@@ -222,6 +222,40 @@ std::size_t basicStatic(std::size_t cell, cellDomain* domain){
     
     return cell;
 };
+
+std::size_t kineticFall(std::size_t cell, cellDomain* domain){
+
+    cName valids = NONE;      //  Valids are cell names that are allowed to swap to (mainly NONE)
+
+    behaviorComp& bComp = domain->behaviorCompCells[cell];
+    bComp.cellV.y += GRAVITY;
+    bComp.pEnergy += GRAVITY * updateManager[domain->readBehavior(cell).type].mass;
+    int fallRay = (int)bComp.cellV.y;
+
+    if (fallRay < 1) return cell;       // acceleration below 1px skips the render
+
+    std::size_t target = cell;
+    bool hit = false;
+
+    for (int f = 1; f <= fallRay; f++){
+
+        int next = domain->getOffset(cell, 0, f);
+
+        bool exceededBounds = (next == -1);
+        bool validElement = (domain->readBehavior((std::size_t)(next)).type == valids);
+
+        if (exceededBounds || !validElement){ 
+            hit = true;
+            break;
+        };
+
+        target = (std::size_t)(next);
+    };
+
+    if (hit) bComp.cellV.y = 0;
+    return target;  
+};
+
 
 Color grainyShading(std::size_t cell, cellDomain* domain){
 
@@ -265,11 +299,11 @@ Color grainyShading(std::size_t cell, cellDomain* domain){
 void initElementRecipe(){
     for (uint16_t i = 0; i < MAX_ELEM_STEPS; i++)   updateManager[i].count = 0;
 
-    updateManager[SAND] = {1, 15,
-        {   basicPowder, nullptr, nullptr, nullptr }
+    updateManager[SAND] = {2, 15,
+        {   kineticFall, basicSolidPowder, nullptr, nullptr }
     };
-    updateManager[GRAVEL] = {1, 20,
-        {   basicPowder, nullptr, nullptr, nullptr }
+    updateManager[GRAVEL] = {2, 20,
+        {   kineticFall, basicSolidPowder, nullptr, nullptr }
     };
     updateManager[WOOD] = {1, 10,
         {   basicStatic, nullptr, nullptr, nullptr }

@@ -10,6 +10,7 @@
 
 #define CELL_SCALE 3
 #define MAX_ELEM_STEPS 4
+#define GRAVITY 0.2f
 
 enum cName : uint8_t{
     NONE = 0,
@@ -72,25 +73,23 @@ struct behaviorComp{
     /*  Kinematic/Behavior vars */
 
     Vector2 cellV;          // mostly for acceleration, but very useful -> KCell (aka physics-affect sand)
+    float pEnergy;          // the equivalent of potential energy
               
-
-
-    behaviorComp(): active(false), type(NONE), cellV({0,0}) {};
+    behaviorComp(): active(false), type(NONE), cellV({0,0}), pEnergy(0.0f) {};
 
     behaviorComp(cName t): 
         active(true),           // ⬅️ Initialized (e.g., set to true for a new particle)
         type(t),               
-        cellV({0,0})            // ⬅️ Initialized (e.g., use a default value, or take as argument)   
+        cellV({0,0}),            // ⬅️ Initialized (e.g., use a default value, or take as argument)
+        pEnergy(0.0f)   
     {};
 };
 
 struct elementRecipe{
     uint8_t count;
-    uint32_t mass;
+    uint32_t mass;              //  unique per element -> affects density swaps and kinematics
     behaviorLogic bSteps[MAX_ELEM_STEPS];
 };
-
-
 
 /*  CELL DOMAIN   */
 
