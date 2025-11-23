@@ -6,6 +6,7 @@
 #include "iostream"
 
 #include "cell.hpp"
+#include "brush.hpp"
 #include "debug.hpp"
 
 #define TARGET_FPS  (double)(144)
@@ -16,33 +17,8 @@ uint16_t frames = 0;
 double accumTick = 0.0; 
 
 cellDomain firstChunk(255,255,CELL_SCALE,(Vector2){10,50});
+brush firstBrush({0,0},firstChunk,5,0.5f);
 
-void drawBrush(cellDomain& chunk, int centerX, int centerY, int radius, cName material, float density) {
-    
-    // 1. Iterate over a bounding box around the mouse
-    // We use 'int' to allow negative values (off-screen) without crashing
-    for (int y = -radius; y <= radius; y++) {
-        for (int x = -radius; x <= radius; x++) {
-
-            // 2. Circular Mask Check (Pythagoras: x*x + y*y <= r*r)
-            // If outside the circle, skip.
-            if ((x * x) + (y * y) > (radius * radius)) continue;
-
-            // 3. "Spray Paint" Randomness Check
-            // If density is 1.0, it fills completely. If 0.5, it fills 50% of the pixels.
-            // GetRandomValue returns 0-100, so we divide by 100.0f
-            if ((GetRandomValue(0, 100) / 100.0f) > density) continue;
-
-            // 4. Calculate Target Coordinates
-            int targetX = centerX + x;
-            int targetY = centerY + y;
-
-            // 5. Call your existing Add function
-            // Note: cellAdd/addParticle should handle bounds checking internally!
-            chunk.cellAdd((uint8_t)targetX, (uint8_t)targetY, material);
-        }
-    }
-};
 
 void GameInit()
 {
@@ -68,16 +44,12 @@ bool GameUpdate()
 {
     
     // mouse funct
-    Vector2 mouseTranslate = (Vector2){(GetMouseX()-firstChunk.boxPos.x)/firstChunk.cellSize,(GetMouseY()-firstChunk.boxPos.y)/firstChunk.cellSize};
-
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) drawBrush(firstChunk, mouseTranslate.x, mouseTranslate.y, 5,  NONE, 0.9f);
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) drawBrush(firstChunk, mouseTranslate.x, mouseTranslate.y, 3,  WOOD, 0.5f);
         
     accumTick += (double)(GetFrameTime());
 
     while (accumTick >= PHY_STEP){
-        drawBrush(firstChunk, 185, 10, 3,  GRAVEL, 0.5f);
-        drawBrush(firstChunk, 85, 10, 3,  SAND, 0.5f);
+    
+        firstBrush.updateBrush(MOUSE_BUTTON_LEFT);
 
         firstChunk.domainUpdate(frames++);
         accumTick -= PHY_STEP;

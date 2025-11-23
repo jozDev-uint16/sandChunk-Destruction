@@ -6,8 +6,7 @@
 #include <math.h>
 #include "memory"
 #include "algorithm"
-#include "iostream"
-#include "vector"
+
 
 #define CELL_SCALE 3
 #define MAX_ELEM_STEPS 4
@@ -20,8 +19,6 @@ enum cName : uint8_t{
     /*  NOTE: do not use the last enum as an actual particle    */
     MAX_TYPES
 };
-
-
 
 struct cellOffset { int dx, dy; };
 
