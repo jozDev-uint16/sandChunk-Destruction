@@ -15,6 +15,9 @@
 uint16_t frames = 0;
 double accumTick = 0.0; 
 
+
+/*      MAIN GAME OBJECTS       */
+
 cellDomain firstChunk(255,255,CELL_SCALE,(Vector2){10,50});
 brush firstBrush({0,0},firstChunk,5,0.5f);
 

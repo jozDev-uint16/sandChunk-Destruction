@@ -45,8 +45,8 @@ static const uint8_t ORDER_SWAPPED[8] = { 0, 2, 1, 3, 4, 5, 6, 7 };
 
 struct cellDomain;      // forward declared
 
-typedef std::size_t (*behaviorLogic)(std::size_t cell, cellDomain* domain); 
-typedef Color (*renderAfter)(std::size_t cell, cellDomain* domain); 
+typedef std::size_t (*behaviorLogic)    (std::size_t cell, cellDomain* domain); 
+typedef Color (*renderAfter)            (std::size_t cell, cellDomain* domain); 
 
 struct renderComp{
     Color color;
@@ -67,23 +67,26 @@ struct renderComp{
 struct behaviorComp{
     
     bool active;            // if active, then update! (and the converse)
-    cName type;
-    uint8_t collideMask;    // bitmap of needed neighboring cells
-    float density;   
-    // add more metrics maybe?       
+    cName type;             // id for behavior
 
-    behaviorComp(): active(false), type(NONE), collideMask(0b00000000), density(0.0f) {};
+    /*  Kinematic/Behavior vars */
 
-    behaviorComp(cName t, uint8_t mask): 
-        active(true),          // ⬅️ Initialized (e.g., set to true for a new particle)
+    Vector2 cellV;          // mostly for acceleration, but very useful -> KCell (aka physics-affect sand)
+              
+
+
+    behaviorComp(): active(false), type(NONE), cellV({0,0}) {};
+
+    behaviorComp(cName t): 
+        active(true),           // ⬅️ Initialized (e.g., set to true for a new particle)
         type(t),               
-        collideMask(mask),     
-        density(1.0f)         // ⬅️ Initialized (e.g., use a default value, or take as argument)   
+        cellV({0,0})            // ⬅️ Initialized (e.g., use a default value, or take as argument)   
     {};
 };
 
 struct elementRecipe{
     uint8_t count;
+    uint32_t mass;
     behaviorLogic bSteps[MAX_ELEM_STEPS];
 };
 
@@ -142,5 +145,4 @@ void initCellPalette();
 
 /*  This basically makes the order of all added things indexed by the enum + 1*/
 
-//  INITIALIZE THE CHUNK HERE TOO:
 

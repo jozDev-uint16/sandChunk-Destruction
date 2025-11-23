@@ -184,9 +184,8 @@ void cellDomain::domainReset    (){
 //
 
 std::size_t basicPowder(std::size_t cell, cellDomain* domain){
-    uint8_t mask = domain->behaviorCompCells[cell].collideMask;
-    cName valids = NONE;
-    //  Valids are cell names that are allowed to swap to (mainly NONE)
+    uint8_t mask = ((1<<0) | (1<<1) | (1<<2));  //  collide mask will be unique to ALL behaviors
+    cName valids = NONE;                        //  Valids are cell names that are allowed to swap to (mainly NONE)
 
     bool flip = (GetRandomValue(0, 1) == 1);
     const uint8_t* checkOrder = flip ? ORDER_SWAPPED : ORDER_NORMAL;
@@ -266,13 +265,13 @@ Color grainyShading(std::size_t cell, cellDomain* domain){
 void initElementRecipe(){
     for (uint16_t i = 0; i < MAX_ELEM_STEPS; i++)   updateManager[i].count = 0;
 
-    updateManager[SAND] = {1,
+    updateManager[SAND] = {1, 15,
         {   basicPowder, nullptr, nullptr, nullptr }
     };
-    updateManager[GRAVEL] = {1,
+    updateManager[GRAVEL] = {1, 20,
         {   basicPowder, nullptr, nullptr, nullptr }
     };
-    updateManager[WOOD] = {1,
+    updateManager[WOOD] = {1, 10,
         {   basicStatic, nullptr, nullptr, nullptr }
     };
 
@@ -288,14 +287,13 @@ void initCellPalette(){
     updateList[NONE] =     behaviorComp();
     renderList[NONE] =     renderComp();
 
-
-    updateList[SAND] =     behaviorComp(SAND, (1<<0) | (1<<1) | (1<<2));
+    updateList[SAND] =     behaviorComp(SAND);
     renderList[SAND] =       renderComp(elementPalette[SAND],((Vector3){0.0f,0.2f,0.0f}), grainyShading);
 
-    updateList[GRAVEL] =   behaviorComp(GRAVEL, (1<<0) | (1<<1) | (1<<2));
+    updateList[GRAVEL] =   behaviorComp(GRAVEL);
     renderList[GRAVEL] =     renderComp(elementPalette[GRAVEL],((Vector3){0.0f,0.2f,0.1f}), grainyShading);
 
-    updateList[WOOD] =   behaviorComp(WOOD, (0x00000000));
+    updateList[WOOD] =   behaviorComp(WOOD);
     renderList[WOOD] =     renderComp(elementPalette[WOOD],((Vector3){0.0f,0.2f,0.3f}), grainyShading);
     // add here
     //  updateList[ ]
