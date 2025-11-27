@@ -5,6 +5,7 @@
 #include "memory"
 #include "vector"
 #include "algorithm"
+#include "iostream"
 
 
 #include "particle.hpp"
@@ -15,10 +16,7 @@ void initialElements(){
     elementRegistry.resize((int)ptcType::_MAX_TYPE_COUNT);
 
     // Phase, Density, Friction, Restitution  
-    elementRegistry[(int)ptcType::EMPTY] = { 
-        "null", (Color){0,0,0,0}, 
-        { phaseComponent::phaseType::SOLID, 0,0,0 } 
-    };
+    
     elementRegistry[(int)ptcType::STONE] = { 
         "Stone", (Color){89, 89, 90, 255}, 
         { phaseComponent::phaseType::SOLID, 3.5f, 0.5f, 0.1f } 
@@ -28,7 +26,7 @@ void initialElements(){
         { phaseComponent::phaseType::SOLID, 1.5f, 0.3f, 0.2f } 
     };
     elementRegistry[(int)ptcType::GROUND] = { 
-        "Ground", (Color){90, 60, 40, 255}, 
+        "Ground", (Color){80, 50, 30, 255}, 
         { phaseComponent::phaseType::SOLID, 3.0f, 0.5f, 0.0f } 
     };
     elementRegistry[(int)ptcType::SAND] = { 
@@ -50,7 +48,8 @@ void        registerRxns(ptcType actor, ptcType target, rxnFunction fx){
     reactionRegistry[(int)actor * (int)ptcType::_MAX_TYPE_COUNT + (int)target] = fx;
 }
 void        initialRxnMatrix(){
-    reactionRegistry.resize((int)(ptcType::_MAX_TYPE_COUNT)^2, NoReaction);
+    int maxRxns = (int)(ptcType::_MAX_TYPE_COUNT);
+    reactionRegistry.resize( maxRxns * maxRxns, NoReaction);
     /*  thats it for now, blank reacts    */
 };
 
@@ -231,20 +230,41 @@ void    ptcBox::rollingSolver   (int idx, int dir){
 };
 void    ptcBox::regularSolver   (int idx){
     particle& ptc = particles[idx];
-    const elementComponent& def = elementRegistry[ptc.typeID];
-    const phaseComponent& props = def.phaseAttribs;
+    const elementComponent& def = elementRegistry[(int)ptc.typeID];
+
+    if (def.phaseAttribs.phase == phaseComponent::phaseType::SOLID){ 
+        ptc.kinems.inEnergy = 0;
+        return;
+    }    // SOLIDS dont move (insta skip)
 
     //  Simple Gravity (1px)
     int downer = this->getPtcOffset(idx,0,1);
-    bool check = (particles[downer].typeID == (uint8_t)ptcType::EMPTY);
-    if (downer != -1 && check) {
-        swapPtc(idx, downer);
-        ptc.kinems.inEnergy += GRAVITY;
-        return;
+    bool fell = false;
+
+    if (downer != -1) {
+        if (particles[downer].typeID == (uint8_t)ptcType::EMPTY) {
+            swapPtc(idx, downer);
+            ptc.kinems.inEnergy += GRAVITY;
+
+            bool fell = true;
+            return;
+        }
     }
 
+    if (!fell) {
+        // 1. Apply heavy damping (e.g. lose 50% energy immediately upon hitting ground)
+        ptc.kinems.inEnergy *= 0.5f;
+        
+        // 2. Apply static friction threshold (The "Adhesion" property)
+        ptc.kinems.inEnergy -= def.phaseAttribs.adhesion;
+
+        // 3. Clamp to 0 (Prevent negative energy)
+        if (ptc.kinems.inEnergy < 0.0f) {
+            ptc.kinems.inEnergy = 0.0f;
+        }
+    };
     // 2. Rolling Logic (Surface Crawl)
-    ptc.kinems.addDrag(props.adhesion);
+    ptc.kinems.addDrag(def.phaseAttribs.adhesion);
 
     if (ptc.kinems.inEnergy <= 0) {
         ptc.setAwake(false);
@@ -254,6 +274,7 @@ void    ptcBox::regularSolver   (int idx){
     int dir = (ptc.kinems.velocity.x != 0) ? ((ptc.kinems.velocity.x > 0) ? 1 : -1) : ((GetRandomValue(0,1)==0)?1:-1);
     rollingSolver(idx, dir);
 };
+
 
 /*  HANDLERS -> determines effects */
 void    ptcBox::handleImpact    (int kinetic, int target){
@@ -295,18 +316,8 @@ void    ptcBox::handleImpact    (int kinetic, int target){
 
 /*  MISC: self explanatory   */
 void    ptcBox::boxUpdate   (int fCount){
-    bool scanLR = (fCount % 2 == 0);
 
-    for (int y = (int)this->bounds - 1; y >= 0; y--){
-
-        if (scanLR){
-            for (int x = 0; x < (int)this->bounds; x++)    updatePtc( y * this->bounds + x );
-            continue;
-        };
-
-        for (int x = (int)this->bounds - 1; x >= 0; x--)   updatePtc( y * this->bounds + x );
-        
-    };
+    for (int idx = this->maxSize - 1; idx >= 0; idx--)     this->updatePtc(idx);
 }
 void    ptcBox::boxDraw     (bool debugMode){
     for (int i = 0; i < this->maxSize; i++){

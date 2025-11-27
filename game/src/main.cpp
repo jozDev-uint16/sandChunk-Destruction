@@ -17,11 +17,8 @@ double accumTick = 0.0;
 
 
 /*      MAIN GAME OBJECTS       */
-
-//cellDomain firstChunk(255,255,CELL_SCALE,(Vector2){10,50});
-//brush firstBrush({0,0},firstChunk,8,0.3f);
-ptcBox  originalChunk   ({10,50},3);
-painter firstPaintbruh  ({0,0},originalChunk,5,1.0f);
+ptcBox  originalChunk  ({10,50},3);
+painter firstPaintbruh ({0,0},originalChunk,5,1.0f);
 
 void GameInit()
 {
@@ -29,10 +26,11 @@ void GameInit()
     InitWindow(WINDOW_DIMENSIONS.x, WINDOW_DIMENSIONS.y, "by jozco");
     SetTargetFPS(TARGET_FPS);
 
-    // load resources (DO NOT SET)
+    // load resources (DO NOT SET NON-GLOBALS)
     initialElements();
     initialRxnMatrix();
 }
+
 
 void GameCleanup()
 {
@@ -83,6 +81,8 @@ void GameDraw()
 int main()
 {
     GameInit();
+
+    
 
     while (!WindowShouldClose())
     {
