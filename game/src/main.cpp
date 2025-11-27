@@ -5,7 +5,7 @@
 #include "memory"
 #include "iostream"
 
-#include "cell.hpp"
+#include "particle.hpp"
 #include "brush.hpp"
 
 #define TARGET_FPS  (double)(144)
@@ -18,27 +18,26 @@ double accumTick = 0.0;
 
 /*      MAIN GAME OBJECTS       */
 
-cellDomain firstChunk(255,255,CELL_SCALE,(Vector2){10,50});
-brush firstBrush({0,0},firstChunk,5,0.5f);
-
+//cellDomain firstChunk(255,255,CELL_SCALE,(Vector2){10,50});
+//brush firstBrush({0,0},firstChunk,8,0.3f);
+ptcBox  originalChunk   ({10,50},3);
+painter firstPaintbruh  ({0,0},originalChunk,5,1.0f);
 
 void GameInit()
 {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(WINDOW_DIMENSIONS.x, WINDOW_DIMENSIONS.y, "SandEngine");
+    InitWindow(WINDOW_DIMENSIONS.x, WINDOW_DIMENSIONS.y, "by jozco");
     SetTargetFPS(TARGET_FPS);
 
     // load resources (DO NOT SET)
-
-    
-    initElementRecipe();
-    initCellPalette();      // just added this here so that it auto-works without doing it globally
+    initialElements();
+    initialRxnMatrix();
 }
 
 void GameCleanup()
 {
     // unload resources
-
+    originalChunk.~ptcBox();
     CloseWindow();
 }
 
@@ -46,18 +45,24 @@ bool GameUpdate()
 {
     
     // mouse funct
+    firstPaintbruh.updatePaint(MOUSE_BUTTON_LEFT);
         
     accumTick += (double)(GetFrameTime());
 
     while (accumTick >= PHY_STEP){
-    
-        firstBrush.updateBrush(MOUSE_BUTTON_LEFT);
+        //
+        originalChunk.boxUpdate(frames);
 
-        firstChunk.domainUpdate(frames++);
+
         accumTick -= PHY_STEP;
     }
 
-    if (IsKeyPressed(KEY_X)) firstChunk.domainReset();
+    if (IsKeyPressed(KEY_X)){ 
+        std::cout << "delet" << std::endl;
+        originalChunk.boxClear();
+    }//
+
+    frames ++;
     return true;
 }
 
@@ -66,17 +71,10 @@ void GameDraw()
     BeginDrawing();
     ClearBackground(BLACK);
 
-    
-    DrawRectangleLines(
-        firstChunk.boxPos.x-1,
-        firstChunk.boxPos.y-1,
-        2+firstChunk.xBounds*firstChunk.cellSize,
-        2+firstChunk.yBounds*firstChunk.cellSize,
-        RED
-    );
-    firstChunk.domainRender();
+    originalChunk.boxDraw(true);
 
-    DrawText("Sand!", 10, 10, 20, RAYWHITE);
+
+    DrawText("Sand Engine! v0.0.8", 10, 10, 20, RAYWHITE);
     DrawFPS(15,GetScreenHeight() - 20);
 
     EndDrawing();

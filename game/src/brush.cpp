@@ -8,39 +8,41 @@
 
 #include "brush.hpp"
 
-void brush::updateBrush(MouseButton key){
+// REVISED
+
+void painter::updatePaint(MouseButton key){
     this->isDrawing = false;
     this->pos = (Vector2){  (float)(GetMouseX()), (float)(GetMouseY()) };
 
-    int cIndex = (int)(this->typeIndex);
+    int cIndex = (int)(this->typeIdx);
     int delta = (int)(GetMouseWheelMove());
 
-    DrawCircle(pos.x,pos.y,
-        this->radius*this->chunk.cellSize,
-        (Color){100,100,100,25});
+    const char* label = elementRegistry[(uint8_t)typeCurrent].name;
+    if(label == nullptr) label = "Eraser!";
 
-    DrawCircleLines(pos.x,pos.y,
-        this->radius*this->chunk.cellSize,
-        elementPalette[typeCurrent]);
+    DrawText(label,pos.x,pos.y+15,
+        (this->box.ptcScale*5),elementRegistry[(uint8_t)typeCurrent].color);
 
     if (delta != 0){
         cIndex += delta;   
 
         if (cIndex < 0) {
-            cIndex = MAX_TYPES - 1; // Wrap to end
-        } else if (cIndex >= MAX_TYPES) {
+            cIndex = (uint8_t)ptcType::_MAX_TYPE_COUNT - 1; // Wrap to end
+        } else if (cIndex >= (uint8_t)ptcType::_MAX_TYPE_COUNT) {
             cIndex = 0;             // Wrap to start
         };
 
         // 4. CRITICAL: Save the new index back to the CLASS MEMBER
-        this->typeIndex = (uint16_t)cIndex;
-        this->typeCurrent = (cName)cIndex;
+        this->typeIdx = (uint8_t)cIndex;
+        this->typeCurrent = (ptcType)cIndex;
     };
+
+    
 
     if(!IsMouseButtonDown(key)) return;
 
     this->isDrawing = true;
-    activateBrush(
+    activatePaint(
         this->pos.x,
         this->pos.y,
         this->radius,
@@ -48,8 +50,7 @@ void brush::updateBrush(MouseButton key){
         this->density);
 };
 
-void brush::activateBrush(int centerX, int centerY, int rad, cName material, float density) {
-    
+void painter::activatePaint(int centerX, int centerY, int rad, ptcType addElement, float density){
     // 1. Iterate over a bounding box around the mouse
     // We use 'int' to allow negative values (off-screen) without crashing
     for (int y = -rad; y <= rad; y++) {
@@ -65,12 +66,12 @@ void brush::activateBrush(int centerX, int centerY, int rad, cName material, flo
             if ((GetRandomValue(0, 100) / 100.0f) > density) continue;
 
             // 4. Calculate Target Coordinates
-            int targetX = ((centerX-this->chunk.boxPos.x)/chunk.cellSize) + x;
-            int targetY = ((centerY-this->chunk.boxPos.y)/chunk.cellSize) + y;
+            int targetX = ((centerX-this->box.xyBox.x)/box.ptcScale) + x;
+            int targetY = ((centerY-this->box.xyBox.y)/box.ptcScale) + y;
 
             // 5. Call your existing Add function
             // Note: cellAdd/addParticle should handle bounds checking internally!
-            chunk.cellAdd((uint8_t)targetX, (uint8_t)targetY, material);
+            this->box.boxAdd((uint8_t)targetX, (uint8_t)targetY, addElement);
         }
     }
 };
