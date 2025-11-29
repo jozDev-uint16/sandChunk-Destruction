@@ -17,12 +17,6 @@ void painter::updatePaint(MouseButton key){
     int cIndex = (int)(this->typeIdx);
     int delta = (int)(GetMouseWheelMove());
 
-    const char* label = elementRegistry[(uint8_t)typeCurrent].name;
-    if(label == nullptr) label = "Eraser!";
-
-    DrawText(label,pos.x,pos.y+15,
-        (this->box.ptcScale*5),elementRegistry[(uint8_t)typeCurrent].color);
-
     if (delta != 0){
         cIndex += delta;   
 
@@ -74,4 +68,12 @@ void painter::activatePaint(int centerX, int centerY, int rad, ptcType addElemen
             this->box.boxAdd((uint8_t)targetX, (uint8_t)targetY, addElement);
         }
     }
-};
+}
+
+void painter::drawBrush(){
+    const char* label = elementRegistry[(uint8_t)typeCurrent].name;
+    if(label == nullptr) label = "Eraser!";
+
+    DrawText(label,pos.x,pos.y+15,
+        (this->box.ptcScale*5),elementRegistry[(uint8_t)typeCurrent].color);
+}

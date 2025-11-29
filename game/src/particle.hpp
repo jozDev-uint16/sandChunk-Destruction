@@ -8,7 +8,7 @@
 #include "vector"
 #include "algorithm"
 
-#define GRAVITY 0.15f
+#define GRAVITY 0.25f
 //  REFACTOR DRAFT OF THE CELL DATA STRUCTURE   V2
 /*
     NOTE: "ptc" means particle
@@ -81,7 +81,7 @@ struct particle{
     kineticComponent kinems;
 
     /*  helpers */
-    bool isKinetic()     { return (flags & FLAG_BALLISTIC != 0); };
+    bool isKinetic()     { return (flags & FLAG_BALLISTIC) != 0; };
 
     void setKinetic(bool val) {
         if (val) flags |= FLAG_BALLISTIC;

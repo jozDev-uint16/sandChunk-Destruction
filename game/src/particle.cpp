@@ -62,7 +62,6 @@ particle::particle(){
     this->kinems.resetK();
 
     this->setAwake(false);
-    this->setKinetic(false);
 };
 
 particle::particle(ptcType element){
@@ -70,7 +69,6 @@ particle::particle(ptcType element){
     this->kinems.resetK();
 
     this->setAwake(true);
-    this->setKinetic(false);
 }
 
 ptcBox::ptcBox(Vector2 xy, uint8_t scale){
@@ -125,7 +123,7 @@ int     ptcBox::getPtcOffset(int idx, int dx, int dy){
 
 /*  SOLVERS -> solves behavior outcomes */
 void    ptcBox::kineticSolver   (int idx){
-    particle& ptc = particles[idx];
+    particle& ptc = this->particles[idx];
 
     //  STEP 1: Delta Velocity 
     ptc.kinems.velocity.x *= 0.99f;
@@ -229,7 +227,7 @@ void    ptcBox::rollingSolver   (int idx, int dir){
     }
 };
 void    ptcBox::regularSolver   (int idx){
-    particle& ptc = particles[idx];
+    particle& ptc = this->particles[idx];
     const elementComponent& def = elementRegistry[(int)ptc.typeID];
 
     if (def.phaseAttribs.phase == phaseComponent::phaseType::SOLID){ 
@@ -246,7 +244,15 @@ void    ptcBox::regularSolver   (int idx){
             swapPtc(idx, downer);
             ptc.kinems.inEnergy += GRAVITY;
 
+
             bool fell = true;
+            if (ptc.kinems.inEnergy < 1.0f) return;
+
+            ptc.setKinetic(true); 
+                
+            // CRITICAL: Transfer the scalar Energy into Vector Velocity
+            ptc.kinems.velocity.y = ptc.kinems.inEnergy;
+
             return;
         }
     }
@@ -298,8 +304,8 @@ void    ptcBox::handleImpact    (int kinetic, int target){
     float transferRatio = (kineticElement.phaseAttribs.density / targetElement.phaseAttribs.density);
     /*  reflects elastic collisions; heavier bullets make the lighter target yeet!  */
 
-    tPtc.kinems.velocity.x += kPtc.kinems.velocity.x * transferRatio * 0.9f;
-    tPtc.kinems.velocity.y += kPtc.kinems.velocity.y * transferRatio;
+    tPtc.kinems.velocity.x += kPtc.kinems.velocity.x * transferRatio * 0.5f;
+    tPtc.kinems.velocity.y += kPtc.kinems.velocity.y * transferRatio * 0.5f;
 
     // 4: Dislodge Check
     float tgtSpeeeeed = sqrtf((tPtc.kinems.velocity.x * tPtc.kinems.velocity.x)+(tPtc.kinems.velocity.y * tPtc.kinems.velocity.y));
@@ -330,7 +336,7 @@ void    ptcBox::boxDraw     (bool debugMode){
         int sy = i / bounds;
         
         Color end_color = defin.color;
-        if (ptc.isKinetic()) end_color = ColorTint(end_color, RAYWHITE);
+        if (ptc.isKinetic() && debugMode) end_color = ColorTint(end_color, RED);
 
         DrawRectangle(
             this->xyBox.x + (sx * this->ptcScale), 

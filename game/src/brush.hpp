@@ -27,6 +27,7 @@ struct painter{
     void updatePaint(MouseButton key);
 
     void activatePaint(int centerX, int centerY, int rad, ptcType addElement, float density);
+    void drawBrush();
 
 };
 

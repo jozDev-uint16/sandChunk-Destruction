@@ -70,6 +70,7 @@ void GameDraw()
     ClearBackground(BLACK);
 
     originalChunk.boxDraw(true);
+    firstPaintbruh.drawBrush();
 
 
     DrawText("Sand Engine! v0.0.8", 10, 10, 20, RAYWHITE);
