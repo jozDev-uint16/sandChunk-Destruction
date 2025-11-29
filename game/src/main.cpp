@@ -72,6 +72,7 @@ void GameDraw()
     originalChunk.boxDraw(true);
     firstPaintbruh.drawBrush();
 
+    originalChunk.boxDebug(IsKeyDown(KEY_TAB));
 
     DrawText("Sand Engine! v0.0.8", 10, 10, 20, RAYWHITE);
     DrawFPS(15,GetScreenHeight() - 20);

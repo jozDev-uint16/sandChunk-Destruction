@@ -336,7 +336,7 @@ void    ptcBox::boxDraw     (bool debugMode){
         int sy = i / bounds;
         
         Color end_color = defin.color;
-        if (ptc.isKinetic() && debugMode) end_color = ColorTint(end_color, RED);
+        if (ptc.isKinetic() && debugMode) end_color = ColorTint(end_color, GOLD  );
 
         DrawRectangle(
             this->xyBox.x + (sx * this->ptcScale), 
@@ -375,4 +375,27 @@ void    ptcBox::boxAdd      (int x, int y, ptcType element){
 };
 void    ptcBox::boxClear    (){
     for (int i = 0; i < maxSize; i++){ this->particles[i] = particle();};
+};
+void    ptcBox::boxDebug    (bool debugActivate){
+    
+    if(!debugActivate) return;
+    
+    for (int i = 0; i < maxSize; i++) {
+        // Skip empty or sleeping particles
+        if (particles[i].typeID == (uint8_t)ptcType::EMPTY) continue;
+        if (!(particles[i].flags & FLAG_AWAKE)) continue; 
+
+        // Calculate Position
+        int sx = i % bounds;
+        int sy = i / bounds;
+
+        // Draw Green Outline for Awake Particles
+        DrawRectangleLines(
+            this->xyBox.x + (sx * this->ptcScale), 
+            this->xyBox.y + (sy * this->ptcScale),
+            this->ptcScale,
+            this->ptcScale,
+            GREEN
+        );
+    }
 };

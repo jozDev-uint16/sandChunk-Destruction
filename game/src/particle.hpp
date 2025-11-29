@@ -138,6 +138,8 @@ public:
     void    boxDraw     (bool debugMode);
     void    boxAdd      (int x, int y, ptcType element);
     void    boxClear    ();
+
+    void    boxDebug    (bool debugActivate);
 };
 
 
