@@ -110,6 +110,16 @@ class ptcBox{
 
     uint8_t bounds;             // in-grid limits of box -> max of 255
 
+    /*  HANDLERS -> determines effects */
+    void    handleImpact    (int kinetic, int target);
+    void    handleFall      (particle& ptc);
+    void    handleDislodge  (int currIdx, int hitIdx, int dir, particle& ptc);
+
+    bool    attemptRamp     (int& currIdx, int dir, particle& ptc);
+    bool    attemptDiagStep (int& currIdx, int dir, particle& ptc);
+    bool    attemptFlatStep (int& currIdx, int dir, particle& ptc);
+    bool    attemptDiagClimb(int& currIdx, int dir, particle& ptc);
+
 public:
     Vector2 xyBox;              // position of box in scene/world
     uint16_t maxSize;           // max length of box list -> intended to be 255^2
@@ -120,7 +130,7 @@ public:
     ptcBox(Vector2 xy, uint8_t scale);
     ~ptcBox();
 
-    /*  CORE METHODS*/
+    /*  CORE METHODS    */
     void    updatePtc   (int idx);
     void    swapPtc     (int idxA, int idxB);
     int     getPtcOffset(int idx, int dx, int dy);
@@ -130,8 +140,8 @@ public:
     void    rollingSolver   (int idx, int dir);
     void    regularSolver   (int idx);
 
-    /*  HANDLERS -> determines effects */
-    void    handleImpact    (int kinetic, int target);
+    /*  PTC     -> general particle methods */
+    void    wakeNeighbors   (int idx);
 
     /*  BOX: self explanatory   */
     void    boxUpdate   (int fCount);

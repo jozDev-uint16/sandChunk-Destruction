@@ -20,6 +20,8 @@ double accumTick = 0.0;
 ptcBox  originalChunk  ({10,50},3);
 painter firstPaintbruh ({0,0},originalChunk,5,1.0f);
 
+
+
 void GameInit()
 {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
@@ -69,7 +71,7 @@ void GameDraw()
     BeginDrawing();
     ClearBackground(BLACK);
 
-    originalChunk.boxDraw(true);
+    originalChunk.boxDraw(IsKeyDown(KEY_TAB));
     firstPaintbruh.drawBrush();
 
     originalChunk.boxDebug(IsKeyDown(KEY_TAB));

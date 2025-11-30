@@ -106,6 +106,13 @@ void    ptcBox::swapPtc     (int idxA, int idxB){
     if (!ValidA || !ValidB) return;
 
     std::swap(this->particles[idxA],this->particles[idxB]);
+
+    this->particles[idxA].setAwake(true);
+    this->particles[idxB].setAwake(true);
+
+    // Chain Reaction -> wake up the surr particles?
+    wakeNeighbors(idxA);
+    wakeNeighbors(idxB);
 };
 int     ptcBox::getPtcOffset(int idx, int dx, int dy){
     int current_x = (idx % bounds);
@@ -171,6 +178,7 @@ void    ptcBox::kineticSolver   (int idx){
 };
 void    ptcBox::rollingSolver   (int idx, int dir){
     particle& ptc = this->particles[idx];
+    const elementComponent& def = elementRegistry[ptc.typeID];
 
     int maxSteps = (int)ptc.kinems.inEnergy;
     if (maxSteps > 5) maxSteps = 5; // Cap rolling speed per frame
@@ -179,51 +187,19 @@ void    ptcBox::rollingSolver   (int idx, int dir){
 
     for (int i = 0; i < maxSteps; i++) {
         
-        // A. Ramp Launch Check (Ground disappeared)
-        int down = this->getPtcOffset(nowIdx, 0, 1);
-        if (down != -1 && this->particles[down].typeID == (uint8_t)ptcType::EMPTY) {
-            // Convert Roll -> Ballistic
-            ptc.kinems.velocity.x = (float)(dir * ptc.kinems.inEnergy);
-            ptc.kinems.velocity.y = 0.5f;
-            ptc.setKinetic(true);
+        ptc.kinems.inEnergy -= def.phaseAttribs.adhesion; 
+        if (ptc.kinems.inEnergy <= 0) {
+            ptc.kinems.inEnergy = 0;
             break;
         }
 
-        // B. Pathfinding (Diagonal Priority)
-        int diag = this->getPtcOffset(nowIdx, dir, 1);
-        
-        // OBSTACLE HIT CHECK
-        if (diag != -1 && this->particles[diag].typeID != (uint8_t)ptcType::EMPTY) {
-            // Ski Ramp Logic: Can we fly over it?
-            if (ptc.kinems.inEnergy > 4.0f) {
-                // Yes! Launch horizontally
-                ptc.kinems.velocity.x = (float)dir * ptc.kinems.inEnergy;
-                ptc.kinems.velocity.y = -1.0f; // Hop up
-                ptc.setKinetic(true);
-                
-                // Optional: Kick the obstacle (Dislodge)
-                this->handleImpact(nowIdx, diag);
-                break;
-            }
-            break; // Blocked and not enough energy
-        }
-        else if (diag != -1) {
-            // Path clear, Roll
-            this->swapPtc(nowIdx, diag);
-            nowIdx = diag;
-            ptc.kinems.inEnergy -= 0.1f; // Rolling cost
-        }
-        else {
-            // Check flat side (Liquids mainly)
-            int side = this->getPtcOffset(nowIdx, dir, 0);
-            if (side != -1 && this->particles[side].typeID == (uint8_t)ptcType::EMPTY) {
-                 swapPtc(nowIdx, side);
-                 nowIdx = side;
-                 ptc.kinems.inEnergy -= 0.2f;
-            } else {
-                break; // Stuck
-            }
-        }
+        if (attemptRamp(nowIdx,dir,ptc))        break;      // #1 RAMP LAUNCH (diag -> horizontal)
+        if (attemptDiagStep(nowIdx,dir,ptc))    continue;   // #2 DIAG FALL (down + side)
+        if (attemptFlatStep(nowIdx,dir,ptc))    continue;   // #3 SLIDE (just side)
+        if (attemptDiagClimb(nowIdx,dir,ptc))   continue;   // #4 DIAG CLIMB (up + side)
+
+        ptc.kinems.inEnergy = 0;
+        break;
     }
 };
 void    ptcBox::regularSolver   (int idx){
@@ -232,6 +208,7 @@ void    ptcBox::regularSolver   (int idx){
 
     if (def.phaseAttribs.phase == phaseComponent::phaseType::SOLID){ 
         ptc.kinems.inEnergy = 0;
+        ptc.setAwake(false);
         return;
     }    // SOLIDS dont move (insta skip)
 
@@ -257,18 +234,8 @@ void    ptcBox::regularSolver   (int idx){
         }
     }
 
-    if (!fell) {
-        // 1. Apply heavy damping (e.g. lose 50% energy immediately upon hitting ground)
-        ptc.kinems.inEnergy *= 0.5f;
-        
-        // 2. Apply static friction threshold (The "Adhesion" property)
-        ptc.kinems.inEnergy -= def.phaseAttribs.adhesion;
+    if (!fell) this->handleFall(ptc);
 
-        // 3. Clamp to 0 (Prevent negative energy)
-        if (ptc.kinems.inEnergy < 0.0f) {
-            ptc.kinems.inEnergy = 0.0f;
-        }
-    };
     // 2. Rolling Logic (Surface Crawl)
     ptc.kinems.addDrag(def.phaseAttribs.adhesion);
 
@@ -319,8 +286,127 @@ void    ptcBox::handleImpact    (int kinetic, int target){
     kPtc.kinems.velocity.x *= -0.25f;
     kPtc.kinems.velocity.y *= -0.25f;
 };
+void    ptcBox::handleFall(particle& ptc){
+    const elementComponent& def = elementRegistry[ptc.typeID];
+    // 1. Apply heavy damping (e.g. lose 50% energy immediately upon hitting ground)
+    ptc.kinems.inEnergy *= 0.5f;
+    
+    // 2. Apply static friction threshold (The "Adhesion" property)
+    ptc.kinems.inEnergy -= def.phaseAttribs.adhesion;
+
+    // 3. Clamp to 0 (Prevent negative energy)
+    if (ptc.kinems.inEnergy < 0.0f) {
+        ptc.kinems.inEnergy = 0.0f;
+    }
+};
+void    ptcBox::handleDislodge  (int currIdx, int hitIdx, int dir, particle& ptc){
+    particle& hitPtc = this->particles[hitIdx];
+    const elementComponent& hitDef = elementRegistry[ptc.typeID];
+    
+    // 1. Kick the Obstacle (if not Bedrock/Static)
+    // We check adhesion/density to see if it's movable
+    if (hitDef.phaseAttribs.density < 100.0f) { 
+        float transfer = ptc.kinems.inEnergy * 0.5f;
+        
+        hitPtc.kinems.velocity.x = (float)dir * transfer;
+        hitPtc.kinems.velocity.y = 1.0f; // Knock down
+        hitPtc.setKinetic(true);
+        hitPtc.setAwake(true);
+        
+        ptc.kinems.inEnergy -= transfer;
+    }
+    
+    ptc.kinems.velocity.x = (float)dir * ptc.kinems.inEnergy;
+    ptc.kinems.velocity.y = -1.0f; // Hop up
+    ptc.setKinetic(true);
+}
+
+bool    ptcBox::attemptRamp     (int& currIdx, int dir, particle& ptc){
+    int down = this->getPtcOffset(currIdx, 0, 1);
+
+
+    if (down != -1 && this->particles[down].typeID == (uint8_t)ptcType::EMPTY) {
+        // Convert Roll -> Ballistic
+        ptc.kinems.velocity.x = (float)(dir * ptc.kinems.inEnergy);
+        ptc.kinems.velocity.y = 0.5f;
+        ptc.setKinetic(true);
+        return true;
+    }
+    return false;
+};
+bool    ptcBox::attemptDiagStep (int& currIdx, int dir, particle& ptc){
+    int diag = this->getPtcOffset(currIdx, dir, 1);
+        
+    if (diag != -1) return false;
+    
+        // OBSTACLE HIT CHECK
+    if (this->particles[diag].typeID != (uint8_t)ptcType::EMPTY) {
+        // Ski Ramp Logic: Can we fly over it?
+        if (ptc.kinems.inEnergy > 4.0f) {
+            // Yes! Launch horizontally
+            this->handleDislodge(currIdx,diag,dir,ptc);
+            return true;
+        }
+        return false; // Blocked and not enough energy
+    }
+    
+    // Path clear, Roll
+    this->swapPtc(currIdx, diag);
+    currIdx = diag;
+
+    ptc.kinems.inEnergy -= 0.1f; // Rolling cost
+    return true;
+};
+bool    ptcBox::attemptFlatStep (int& currIdx, int dir, particle& ptc){
+    const elementComponent& def = elementRegistry[ptc.typeID];
+    
+    if(def.phaseAttribs.phase != phaseComponent::phaseType::LIQUID && (ptc.kinems.inEnergy < 7.0f)) return false;
+
+    int side = this->getPtcOffset(currIdx, dir, 0);
+
+    if (side != -1 && this->particles[side].typeID == (uint8_t)ptcType::EMPTY) {
+        this->swapPtc(currIdx, side);
+        currIdx = side;
+
+        ptc.kinems.inEnergy -= 0.2f;
+        return true;
+    } 
+    return false;
+};
+bool    ptcBox::attemptDiagClimb(int& currIdx, int dir, particle& ptc){
+    if (ptc.kinems.inEnergy < 3.0f) return false;
+
+    int upDiag = getPtcOffset(currIdx, dir, -1); // Up + Dir
+    
+    if (upDiag != -1 && particles[upDiag].typeID == (uint8_t)ptcType::EMPTY) {
+        swapPtc(currIdx, upDiag);
+        currIdx = upDiag;
+        
+        // Climbing fights gravity -> Expensive cost
+        ptc.kinems.inEnergy -= 1.0f; 
+        return true;
+    }
+    return false;
+};
+
+
 
 /*  MISC: self explanatory   */
+void    ptcBox::wakeNeighbors   (int idx){
+    int neighbors[4] = {};
+    neighbors[0] = this->getPtcOffset(idx,0,-1);
+    neighbors[1] = this->getPtcOffset(idx,0,1);
+    neighbors[2] = this->getPtcOffset(idx,-1,0);
+    neighbors[3] = this->getPtcOffset(idx,1,0);
+
+    for (int i = 0; i < 4; i++){
+        int neighIdx = neighbors[i];
+
+        if (neighIdx == -1) continue;
+        this->particles[neighIdx].setAwake(true);
+    }
+};
+
 void    ptcBox::boxUpdate   (int fCount){
 
     for (int idx = this->maxSize - 1; idx >= 0; idx--)     this->updatePtc(idx);
@@ -336,7 +422,7 @@ void    ptcBox::boxDraw     (bool debugMode){
         int sy = i / bounds;
         
         Color end_color = defin.color;
-        if (ptc.isKinetic() && debugMode) end_color = ColorTint(end_color, GOLD  );
+        if (ptc.isKinetic() && debugMode) end_color = ColorTint(end_color, RED  );
 
         DrawRectangle(
             this->xyBox.x + (sx * this->ptcScale), 
@@ -368,10 +454,10 @@ void    ptcBox::boxAdd      (int x, int y, ptcType element){
 
     particle& addPtc    = this->particles[idxAdd];
     addPtc.typeID       = (uint8_t)element;
-
-    if (!(element == ptcType::EMPTY))    addPtc.setAwake(true);
+    addPtc.setAwake(true);
     addPtc.kinems.resetK();
 
+    this->wakeNeighbors(idxAdd);
 };
 void    ptcBox::boxClear    (){
     for (int i = 0; i < maxSize; i++){ this->particles[i] = particle();};
