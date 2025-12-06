@@ -5,4 +5,10 @@ future games probably
 It works with raylib version 5.0. Tested on both Windows 10 and Windows 11.
 (from original description)
 
+- JozCo
 
+# Preview
+
+<p align="center">
+  <img src="example1.jpg" alt="" width="800">
+</p>
