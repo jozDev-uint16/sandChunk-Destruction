@@ -33,7 +33,6 @@ int main()
             elementID::SAND
         );
 
-
         testChunk.boxUpdate();
         testChunk.boxReset(IsKeyPressed(KEY_X));
 

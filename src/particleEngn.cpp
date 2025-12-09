@@ -239,7 +239,7 @@ void    particleBox::boxRender       (bool debug, int zoom){
         if (ptcs[i].type == elementID::AIR) continue;
 
         Color drawC = define.color;
-        if (ptcs[i].checkState(IS_KINETIC)) drawC = ColorTint(drawC, RAYWHITE);
+        if (ptcs[i].checkState(IS_KINETIC)) drawC = ColorTint(drawC, RED);
 
         boxPixels[i] = drawC;
     }

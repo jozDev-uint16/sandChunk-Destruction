@@ -57,7 +57,7 @@ struct brush{
         case ADD:{
             mode = "ADD";
             int wide    = (int)(deltaPos.x/box.scalePtcs); 
-            int max     = (int)((deltaPos.x * deltaPos.y)/box.scalePtcs);
+            int max     = (int)(wide * (deltaPos.y/box.scalePtcs));
 
             for (int p = 0; p < max; p++){
                 box.particleAdd(
