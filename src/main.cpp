@@ -5,6 +5,7 @@
 #define TARGET_FPS  144
 
 #include "particleEngn.hpp"
+#include "brushObj.hpp"
 
 void gameInit(){
     SetConfigFlags  (FLAG_WINDOW_RESIZABLE);
@@ -12,7 +13,7 @@ void gameInit(){
     SetTargetFPS    (TARGET_FPS);
 
     initialElements();
-}
+};
 
 
 int main() 
@@ -20,16 +21,20 @@ int main()
     gameInit();
 
     //
-    particleBox testChunk({3,18},PTC_SCALE);
+    particleBox testChunk({3,18},PTC_SCALE);    
+    brush       testBrush(testChunk);    
     
     while (!WindowShouldClose()){
-        
-        testChunk.boxUpdate();
-        testChunk.particleAdd(
-            GetRandomValue(110,135),
-            GetRandomValue(0,5),
-            elementID::POWDER);
 
+        testBrush.drawBrush(
+            GetMousePosition(),
+            MOUSE_BUTTON_LEFT,
+            IsMouseButtonDown(MOUSE_BUTTON_LEFT),
+            elementID::SAND
+        );
+
+
+        testChunk.boxUpdate();
         testChunk.boxReset(IsKeyPressed(KEY_X));
 
         BeginDrawing();
@@ -44,4 +49,5 @@ int main()
     }
     
     CloseWindow();
-}
+};
+

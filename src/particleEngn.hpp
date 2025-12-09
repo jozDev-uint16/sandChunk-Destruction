@@ -10,11 +10,11 @@
 
 #define  PTC_SCALE      3
 #define  AIR_DRAG_BASE  0.98f
-#define  GRAVITY        0.25f
+#define  GRAVITY        0.15f
 
 enum class elementID : uint8_t{
     AIR,
-    POWDER,
+    SAND,
 
     //
     _MAX_ID
@@ -104,16 +104,16 @@ void initialElements();
 
 class  particleBox{
 private:
-    /* data */
-    Vector2     boxScreenPos;
+    /* data */   
     uint16_t    maxPtcs;    
     uint8_t     boundsPtcs; 
-    uint8_t     scalePtcs;
 
     Image       ptcTxtr;
     Texture2D   ptcTxtrDrawn;
 
 public:
+    Vector2     boxScreenPos;
+    uint8_t     scalePtcs;
     std::unique_ptr<particle[]> particles;
     
     particleBox(Vector2 screenxy, uint8_t scale){

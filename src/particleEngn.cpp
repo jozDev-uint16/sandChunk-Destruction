@@ -12,7 +12,7 @@ std::vector<elementCompo> elementRegistry;
 void    initialElements(){
     elementRegistry.resize((int)elementID::_MAX_ID);
 
-    elementRegistry[(int)elementID::POWDER] = {
+    elementRegistry[(int)elementID::SAND] = {
         "placeholder powder", ColorBrightness(ColorContrast(GOLD,-0.35f),0.4f),
         {phaseCompo::phaseType::POWDER, 10, 0.35}
     };
@@ -41,26 +41,55 @@ void    particleBox::ballisticSolver(int idx, const elementCompo define){
         return;
     }  
     
-    int     fallRay = (int)ceilf(vectorSpd);
-    float   rayX    = ptc.kinematics.velocity.x/ (float)fallRay;
-    float   rayY    = ptc.kinematics.velocity.y/ (float)fallRay;
+    int     stepsX      = abs(ptc.kinematics.velocity.x);
+    int     stepsY      = abs(ptc.kinematics.velocity.y);
+    int     maxStep     = std::max<int>(stepsX,stepsY);
+
+    const auto checkX = (ptc.kinematics.velocity.x >= 0) ?   RIGHT : LEFT;
+    const auto checkY = (ptc.kinematics.velocity.y >= 0) ?   DOWN : UP;
+    //  TODO: Determine ray limit by largest vector axis (rayX vs rayV)
+    
+    //  If x velocity is zero, SKIP the slope (or just inverse)
+    //  if x velocity is non zero, do the slope method (better option)
 
     int     prevIdx = idx;
 
-    for (int v = 0; v < fallRay; v++){
+    for (int v = 1; v < maxStep; v++){
+
+        // for only vertical motion (avoids the undefined slope)
+        int nextIdx = this->getPtcOffset(prevIdx,checkY,v);
+
+        if  (ptc.kinematics.velocity.x != 0.0f){
+            int   dx, dy, x, y;
+            float m =   (ptc.kinematics.velocity.y/ptc.kinematics.velocity.x);
+
+            if (maxStep == stepsY){
+                dy  = v;
+                dx  = (int)ceil(v * 1/m);
+            } else {
+                dx  = v;
+                dy  = (int)ceil(v * m);
+            };
+            x = (prevIdx % this->boundsPtcs) + dx;
+            y = (prevIdx / this->boundsPtcs) + dy;
+
+            nextIdx = (x + y * this->boundsPtcs);
+
+            if (x < 0 || y < 0)                                 nextIdx = -1;
+            if (x >= this->boundsPtcs || y >= this->boundsPtcs) nextIdx = -1;
+        }
         
-        // TODO: add da thing + convert rays -> multiple checkNeighs (holy shit...)
-
-        const auto checkX = (rayX >= 0) ?   RIGHT : LEFT;
-        const auto checkY = (rayY >= 0) ?   DOWN : UP;
-
-        int nextIdx = getPtcOffset(getPtcOffset(prevIdx, checkX,(int)abs(rayX)), checkY,(int)abs(rayY));
-
         if (nextIdx == -1){
             ptc.setState(false,IS_KINETIC);
             ptc.kinematics.resetPhysics();
 
             ptc.setState(false,AWAKE);
+            return;
+        }
+        if (this->particles[nextIdx].type != elementID::AIR){
+            ptc.setState(false,IS_KINETIC);
+            ptc.kinematics.resetPhysics();
+
             return;
         }
 
@@ -80,14 +109,15 @@ void    particleBox::powderSolver   (int idx, const elementCompo define){
         flip ? getPtcOffset(idx,DOWNRIGHT,1) : getPtcOffset(idx,DOWNLEFT,1)
     };
 
-    ptc.kinematics.inertia += GRAVITY * define.phaseAttributes.mass;
-
     // first check (bottom)
     if (check[0] != -1){
         if (ptcs[check[0]].type == elementID::AIR){ 
+
+             ptc.kinematics.inertia += GRAVITY * define.phaseAttributes.mass;
+
             if (ptc.kinematics.inertia >= 1.0f){
                 ptc.setState(true,IS_KINETIC);
-                ptc.kinematics.velocity.y = ptc.kinematics.inertia;
+                ptc.kinematics.velocity.y = ptc.kinematics.inertia / define.phaseAttributes.mass;
             } 
 
             this->particleSwap(idx,check[0]);
@@ -127,6 +157,7 @@ void    particleBox::particleUpdate  (int idx){
     if (!ptc.checkState(AWAKE))     return;
     if (ptc.type == elementID::AIR) return;
 
+    /*to be readded: KINETICS*/
     if (ptc.checkState(IS_KINETIC)){
         this->ballisticSolver(idx,define);
         return;
@@ -153,6 +184,8 @@ void    particleBox::particleSwap    (int idxA, int idxB){
     ptcs[idxA].setState(true,AWAKE);
     ptcs[idxB].setState(true,AWAKE);
 
+    this->particleWake  (idxA);
+    this->particleWake  (idxB);
 };
 void    particleBox::particleAdd     (int x, int y, elementID type){
     int idx = (y * this->boundsPtcs + x);
@@ -167,6 +200,8 @@ void    particleBox::particleAdd     (int x, int y, elementID type){
     ptc = particle(type);
     ptc.kinematics.resetPhysics();
 
+    ptc.setState(true,AWAKE);
+    this->particleWake(idx);
     //
 };
 void    particleBox::particleWake    (int idx){
@@ -226,7 +261,13 @@ void    particleBox::boxRender       (bool debug, int zoom){
 };
 void    particleBox::boxReset        (bool activate){
     if  (!activate) return;
+    
     for (int i = 0; i < this->maxPtcs; i++) this->particles[i] = particle();
+
+    DrawText(
+        "Cleared!", (GetScreenWidth()/2)-120,(GetScreenHeight()/2)-50,
+        50, LIGHTGRAY
+    );
 };
 void    particleBox::boxDebugs       (){
     const auto& max     = this->maxPtcs - 1;
@@ -249,8 +290,8 @@ void    particleBox::boxDebugs       (){
 
     for (int i = max; i >= 0; i--){
 
+        if (ptcs[i].checkState(ASLEEP)) continue;
         if (ptcs[i].type == elementID::AIR) continue;
-        if (!ptcs[i].checkState(AWAKE)) continue;
 
         int sx = i % this->boundsPtcs;
         int sy = i / this->boundsPtcs;
@@ -273,14 +314,7 @@ void    particleBox::boxDebugs       (){
             sx + this->boxScreenPos.x + (this->boundsPtcs * 2),
             sy + this->boxScreenPos.y, scale, scale,
             GREEN
-        );
-        }
-        if (ptcs[i].checkState(ASLEEP)){
-            DrawRectangleLines(
-            sx + this->boxScreenPos.x,
-            sy + this->boxScreenPos.y + (this->boundsPtcs * 2), 
-            scale, scale, BLUE
-        );
+           );
         }
     }
 };
